@@ -28,12 +28,13 @@ jobs:
         run: |
           Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
           irm get.scoop.sh | iex
-          [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Users\runneradmin\scoop\shims", "User")
 
       # Adding a package adds the main bucket, and gives the shim and inventory
       # assertions a real installation to observe.
       - name: Install a package for the tests to observe
-        run: scoop install 7zip
+        run: |
+          [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Users\runneradmin\scoop\shims", "User")
+          scoop install 7zip
 
       # The suite is written in Pester 3 assertion syntax, which Pester 5
       # rejects. Pin the version used locally rather than trusting the image.
