@@ -27,7 +27,7 @@ jobs:
       - name: Install Scoop
         run: |
           Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-          iwr get.scoop.sh | iex
+          irm get.scoop.sh | iex
 
       # Adding a package adds the main bucket, and gives the shim and inventory
       # assertions a real installation to observe.
