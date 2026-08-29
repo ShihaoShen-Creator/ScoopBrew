@@ -33,8 +33,7 @@ jobs:
       # assertions a real installation to observe.
       - name: Install a package for the tests to observe
         run: |
-          [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Users\runneradmin\scoop\shims", "User")
-          scoop install 7zip
+          C:\Users\runneradmin\scoop\shims\scoop.ps1 install 7zip
 
       # The suite is written in Pester 3 assertion syntax, which Pester 5
       # rejects. Pin the version used locally rather than trusting the image.
