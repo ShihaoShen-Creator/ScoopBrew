@@ -185,6 +185,9 @@
 !/package
 /package/resources/LICENSE.rtf
 
+# Unignore the Windows backend (brew over Scoop).
+!/windows
+
 # Ignore generated documentation site
 /docs/_site
 /docs/.jekyll-metadata

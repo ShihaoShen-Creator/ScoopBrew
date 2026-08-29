@@ -1,0 +1,83 @@
+name: ScoopBrew
+
+on:
+  push:
+    paths:
+      - 'windows/**'
+      - '.github/workflows/scoopbrew.yml'
+  pull_request:
+    paths:
+      - 'windows/**'
+      - '.github/workflows/scoopbrew.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    # Windows PowerShell 5.1, the oldest host this CLI supports.
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Scoop
+        run: |
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          iwr get.scoop.sh | iex
+
+      # Adding a package adds the main bucket, and gives the shim and inventory
+      # assertions a real installation to observe.
+      - name: Install a package for the tests to observe
+        run: scoop install 7zip
+
+      # The suite is written in Pester 3 assertion syntax, which Pester 5
+      # rejects. Pin the version used locally rather than trusting the image.
+      - name: Pin Pester
+        run: |
+          Install-Module Pester -RequiredVersion 3.4.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          Import-Module Pester -RequiredVersion 3.4.0
+          $version = (Get-Module Pester).Version.ToString()
+          Write-Host "Pester $version"
+          if ($version -ne '3.4.0') { throw "expected Pester 3.4.0, found $version" }
+
+      - name: Run Pester suite
+        run: |
+          Import-Module Pester -RequiredVersion 3.4.0
+          Invoke-Pester -Script 'windows/test' -EnableExit
+
+      - name: Smoke test the command surface
+        run: |
+          $brew = './windows/bin/brew.ps1'
+          foreach ($case in @(
+            @('--version'),
+            @('commands'),
+            @('search', '^git$'),
+            @('info', '7zip'),
+            @('list'),
+            @('outdated'),
+            @('deps', 'apimtemplate')
+          )) {
+            Write-Host "==> brew $($case -join ' ')"
+            & $brew @case
+            if ($LASTEXITCODE -ne 0) { throw "brew $($case -join ' ') exited $LASTEXITCODE" }
+          }
+
+      - name: Smoke test the cmd entry point
+        run: |
+          cmd /c "windows\bin\brew.cmd --version"
+          if ($LASTEXITCODE -ne 0) { throw "brew.cmd --version exited $LASTEXITCODE" }
+          cmd /c "windows\bin\brew.cmd definitely-not-a-command >nul 2>&1"
+          if ($LASTEXITCODE -eq 0) { throw "brew.cmd must exit non-zero for an unknown command" }
+
+      # Doctor reports environment warnings as its job, so its exit code is
+      # information here rather than a build result.
+      - name: Report environment diagnostics
+        if: always()
+        run: |
+          & './windows/bin/brew.ps1' doctor
+          Write-Host "brew doctor exited $LASTEXITCODE"
+          exit 0
