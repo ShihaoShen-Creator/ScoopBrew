@@ -28,6 +28,7 @@ jobs:
         run: |
           Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
           irm get.scoop.sh | iex
+          [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Users\runneradmin\scoop\shims", "User")
 
       # Adding a package adds the main bucket, and gives the shim and inventory
       # assertions a real installation to observe.
