@@ -1,0 +1,14 @@
+{
+  "Calinou/scoop-games": "games",
+  "matthewjberger/scoop-nerd-fonts": "nerd-fonts",
+  "niheaven/scoop-sysinternals": "sysinternals",
+  "ScoopInstaller/Extras": "extras",
+  "ScoopInstaller/Java": "java",
+  "ScoopInstaller/Main": "main",
+  "ScoopInstaller/Nirsoft": "nirsoft",
+  "ScoopInstaller/Nonportable": "nonportable",
+  "ScoopInstaller/PHP": "php",
+  "ScoopInstaller/Versions": "versions",
+  "charmbracelet/scoop-bucket": "charm",
+  "ShihaoShen-Creator/ScoopBucket": "shihao"
+}

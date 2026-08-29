@@ -1,117 +1,160 @@
-# 🍺 Homebrew
+# ScoopBrew
 
-[![Latest GitHub release](https://img.shields.io/github/release/Homebrew/brew.svg)](https://github.com/Homebrew/brew/releases)
-[![BSD-2-Clause License](https://img.shields.io/github/license/Homebrew/brew)](https://github.com/Homebrew/brew/blob/HEAD/LICENSE.txt)
-[![GitHub Sponsors](https://img.shields.io/github/sponsors/homebrew?label=GitHub%20Sponsors)](https://github.com/sponsors/Homebrew)
-[![Open Collective backers and sponsors](https://img.shields.io/opencollective/all/homebrew?label=Open%20Collective)](https://opencollective.com/homebrew)
+The Homebrew command surface for Windows, backed by [Scoop](https://scoop.sh).
 
-See [Homebrew's homepage at `brew.sh`](https://brew.sh) for installation instructions, what homebrew does, packages, `brew bundle` and more.
+`brew` here is not Homebrew's Ruby implementation. It is a PowerShell CLI that
+accepts Homebrew command names, options and output conventions, and delegates
+every package operation to Scoop. Homebrew's macOS/Linux install engine
+(Cellar, kegs, bottles, `rpath`, `dyld`, source builds) has no Windows
+counterpart, so the engine is Scoop's and this layer only speaks `brew`.
 
-<img src="https://brew.sh/assets/img/brew-install.gif" alt="Homebrew install demo" width="580" height="424">
+## Requirements
 
-## 💸 Donations
+| | |
+| --- | --- |
+| Windows | 10 or later |
+| PowerShell | 5.1 or 7.x (no module dependencies) |
+| Scoop | installed and at least one bucket added |
+| git | required for `brew tap` and `brew update` |
 
-Homebrew is a non-profit project run entirely by volunteers, not employees.
-We need your funds to pay for software, hardware and hosting around continuous integration and future improvements to the project.
-Every donation will be spent on making Homebrew better for our users.
+Install Scoop first:
 
-Please consider a regular donation through [GitHub Sponsors](https://github.com/sponsors/Homebrew), [Open Collective](https://opencollective.com/homebrew) or [Patreon](https://www.patreon.com/homebrew).
-Homebrew is fiscally hosted by the [Open Source Collective](https://opencollective.com/opensource).
+```powershell
+powershell -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; iwr get.scoop.sh | iex"
+```
 
-## 📚 Documentation
+## Usage
 
-Read the Homebrew manual with [`man brew`](https://docs.brew.sh/Manpage).
+```cmd
+bin\brew.cmd install git
+bin\brew.cmd list
+```
 
-Read [installation](https://docs.brew.sh/Installation),
-[troubleshooting](https://docs.brew.sh/Troubleshooting),
-[contribution](https://github.com/Homebrew/brew/blob/HEAD/docs/How-To-Open-a-Homebrew-Pull-Request.md)
-including the [FAQ](https://docs.brew.sh/FAQ) on [`docs.brew.sh`](https://docs.brew.sh/).
+Or put `bin` and Scoop's shim directory on `PATH` once:
 
-Read the [Homebrew Blog](https://brew.sh/blog/) for release notes, project updates and announcements.
+```powershell
+[Environment]::SetEnvironmentVariable('Path', $env:Path + ';path\to\scoopbrew\bin;' + (Join-Path $env:USERPROFILE 'scoop\shims'), 'User')
+```
 
-## 📦 Packages
-Find [formulae](https://formulae.brew.sh/formula/), [casks](https://formulae.brew.sh/cask/), dependencies, versions and package metadata on [`formulae.brew.sh`](https://formulae.brew.sh).
+Then open a new terminal and run `brew doctor`, which checks this setup and
+reports what is missing.
 
-View anonymised install, build and operating system usage data at [`formulae.brew.sh/analytics`](https://formulae.brew.sh/analytics/).
-Read how Homebrew uses [Anonymous Analytics](https://docs.brew.sh/Analytics).
+## How it maps
 
-## 🔧 Get Help
+Homebrew and Scoop solve the same problem with different vocabulary:
 
-First, please run `brew update` and run (and **read**) `brew doctor`.
+| Homebrew                  | Scoop                       |
+|---|---|
+| tap                       | bucket                      |
+| formula, cask             | app (`extras` bucket for GUI apps) |
+| Cellar, keg, `opt/` links | `apps\<name>\current` plus shims |
+| `brew upgrade`            | `scoop update`              |
+| `brew outdated`           | manifest version comparison |
+| `brew pin` / `unpin`      | `scoop hold` / `scoop unhold` |
+| `brew tab`                | `apps\<name>\<version>\install.json` |
+| `brew bundle`             | `scoop export` / `scoop import` |
+| `brew doctor`             | `scoop checkup`             |
+| `brew --prefix`           | Scoop root, `scoop prefix`  |
 
-Second, read the [Troubleshooting Checklist](https://docs.brew.sh/Troubleshooting).
+Tap-qualified names are accepted too: `brew install user/tap/app` adds the
+tap's bucket first when it is missing, then installs `tap/app`.
 
-**If you don't read these it will take us far longer to help you with your problem.**
+### Tap names and the tap map
 
-After this, if you still need help, please ask in
-[Homebrew/discussions](https://github.com/orgs/Homebrew/discussions)
-or follow (and **read**) the
-[Homebrew/brew new issue chooser](https://github.com/Homebrew/brew/issues/new/choose).
+Buckets are stored under stable lowercase names. `lib/tap-map.json` pins
+GitHub repositories to local shortnames (`"Owner/Repo": "shortname"`), and
+lookups ignore case. Every tap reference accepts three spellings:
 
-## 💬 Social
+- `brew tap ShihaoShen-Creator/ScoopBucket` — the full repository
+- `brew tap ScoopBucket` — the repository name alone
+- `brew tap shihao` — the mapped shortname
 
-Follow Homebrew on [Mastodon](https://fosstodon.org/@homebrew),
-[Bluesky](https://bsky.app/profile/brew.sh),
-[𝕏 (Twitter)](https://x.com/MacHomebrew) or subscribe to the
-[newsletter](https://buttondown.email/homebrew).
+All three add the bucket `shihao`. A `user/repo` the map does not list is
+added as `owner-repo` in lowercase, so unmapped taps still get a stable
+local name. Point `SCOOPBREW_TAP_MAP` at another JSON file to override the
+bundled map.
 
-## 🤝 Contributing
+Two layers of data are read directly rather than through Scoop's PowerShell
+functions, deliberately: bucket manifests (`buckets\<name>\**\*.json`) and
+`scoop export`. Both are documented on-disk formats, whereas Scoop's internal
+function names have changed across releases, so depending on them would make
+this CLI break on a Scoop update. Everything that *changes* state goes through
+the `scoop` executable itself; no download, hash, shim, persist or shortcut
+logic is reimplemented here.
 
-We'd love you to join us and >10,000 others by contributing to Homebrew!
+### Commands
 
-First, please read our [Contribution Guide](CONTRIBUTING.md) and [Code of Conduct](https://github.com/Homebrew/.github/blob/HEAD/CODE_OF_CONDUCT.md#code-of-conduct).
+Implemented, with the Scoop operation behind each:
 
-A good starting point for contributing is:
+`install` `uninstall` `reinstall` `upgrade` `fetch` `outdated` `update`
+`list` `search` `info` `cat` `deps` `uses` `missing` `leaves` `home` `source`
+`desc` `options` `tab` `log` `which` `which-formula` `pin` `unpin`
+`tap` `untap` `tap-info` `--taps` `--repository` `--prefix` `--cellar`
+`--caskroom` `--cache` `config` `doctor` `bundle` `exec` `alias` `unalias`
+`command` `commands` `developer` `docs` `help` `--version`
 
-- `brew tap --force homebrew/core` or `brew tap --force homebrew/cask` (depending on whether you'd rather work on formulae or casks)
-- perform a strict audit on a package you use e.g. `brew audit --strict ffmpeg` for FFmpeg
-- if no warnings, run `brew audit --strict` to run on all packages and pick one to fix
-- read through the warnings and fix them until `brew audit --strict <package>` shows no results
-- [submit a pull request](https://docs.brew.sh/How-To-Open-a-Homebrew-Pull-Request) with your fixes
+Homebrew's internal aliases work with the same meaning, including the one that
+reads ambiguously: `brew up` is `update` (refresh definitions), while
+`brew upgrade` installs newer versions. List them with
+`brew commands --include-aliases`: `ls`, `rm`, `remove`, `abv`, `dr`, `-S`,
+`x`, `ln`, `instal`, `uninstal`, `homepage`, `--repo`, `--config`, `lc`, `tc`.
 
-Alternatively, for something more substantial, check out one of the open issues in
-[Homebrew/brew](https://github.com/homebrew/brew/issues),
-[Homebrew/homebrew-core](https://github.com/homebrew/homebrew-core/issues) or
-[Homebrew/homebrew-cask](https://github.com/homebrew/homebrew-cask/issues).
+Not implemented, each with a reason printed on use: Homebrew's own release and
+CI tooling (`bottle`, `test-bot`, `pr-pull`, `typecheck`, `style`, `tests`,
+`lgtm`, every `generate-*`, `vendor-gems`), macOS/Linux-specific machinery
+(`link`, `unlink`, `sandbox-exec`, `shellenv`, `linkage`, `services`), Homebrew
+data pipelines (`analytics`, `vulns`, `trust`, `readall`, `mcp-server`), and the
+language version-manager syncs. Run the command to see its explanation.
 
-If you've had inspiration for a new feature or bug fix: we don't need you to open an issue first, just [open a pull request](https://docs.brew.sh/How-To-Open-a-Homebrew-Pull-Request) with your implementation and we'll review it.
+### Known limits
 
-Good luck!
+- **`brew autoremove` cannot work.** Scoop's `install.json` records only
+  `architecture`, `url` and `bucket`. Homebrew can remove orphaned dependencies
+  because its Tab records whether you asked for a package directly; Scoop stores
+  no such thing, so guessing would delete packages you installed on purpose.
+  `brew leaves` does work, because that definition needs no provenance.
+- **No source builds.** `--HEAD`, `--build-from-source` and `--with-*` /
+  `--without-*` options are reported as dropped. Scoop installs what a manifest
+  points at.
+- **Version-pinned installs need a reinstall.** `scoop install app@1.2.3` stores
+  a generated manifest, so `scoop update` reports it as always current.
+  `brew upgrade` detects this and reinstalls from the bucket instead.
+- **Symlinks are not required**, since Scoop shims and copies rather than
+  linking. Windows Developer Mode is not needed.
+- `brew services` is not implemented: Homebrew's version drives `launchd` and
+  `systemd`. A Windows backend would mean Task Scheduler or the SCM.
 
-## 🔐 Security
+## Layout
 
-Please see [our security policy](https://github.com/Homebrew/.github/blob/HEAD/SECURITY.md) for how to report security issues and what is in scope.
+```
+bin/
+  brew.ps1        entry point: flag parsing, command dispatch
+  brew.cmd        cmd.exe wrapper so `brew` resolves without a shell hook
+lib/
+  ScoopBrew.psm1  Scoop discovery, manifest index, version compare, output
+  tap-map.json    GitHub repository -> local bucket name map
+commands/         one brew-<name>.ps1 per command
+test/             Pester suite
+```
 
-## 👥 Who We Are
+Each command file declares `# Usage:`, `# Summary:` and optional `# Help:`
+comment headers, which `brew commands` and `brew help <command>` read. This
+mirrors how Scoop's own `libexec/scoop-<cmd>.ps1` files self-document, and means
+adding a command is adding one file.
 
-Homebrew's [Project Leader](https://docs.brew.sh/Homebrew-Governance#project-leader) is [Mike McQuaid](https://github.com/MikeMcQuaid).
+Options are translated by the dispatcher: PowerShell does not bind GNU-style
+`--flag` names, so `--full-name` becomes `-FullName` when the target script
+declares that parameter, and stays verbatim otherwise so it can be forwarded to
+Scoop.
 
-Homebrew's [Lead Maintainers](https://docs.brew.sh/Homebrew-Governance#lead-maintainer) are [Bevan Kay](https://github.com/bevanjkay), [Carlo Cabrera](https://github.com/carlocab), [Issy Long](https://github.com/issyl0), [Justin Krehel](https://github.com/krehel), [Michael Cho](https://github.com/cho-m), [Mike McQuaid](https://github.com/MikeMcQuaid), [Nanda H Krishna](https://github.com/nandahkrishna), [Patrick Linnane](https://github.com/p-linnane), [Rui Chen](https://github.com/chenrui333), [Ruoyu Zhong](https://github.com/ZhongRuoyu), [Sam Ford](https://github.com/samford) and [Sean Molenaar](https://github.com/SMillerDev).
+## Tests
 
-Homebrew's other Maintainers are [Andrew Nesbitt](https://github.com/andrew), [Anton Melnikov](https://github.com/botantony), [Bo Anderson](https://github.com/Bo98), [Branch Vincent](https://github.com/branchv), [Caleb Xu](https://github.com/alebcay), [Daeho Ro](https://github.com/daeho-ro), [Douglas Eichelberger](https://github.com/dduugg), [Dustin Rodrigues](https://github.com/dtrodrigues), [FX Coudert](https://github.com/fxcoudert), [Klaus Hipp](https://github.com/khipp), [Markus Reiter](https://github.com/reitermarkus), [Michka Popoff](https://github.com/iMichka), [Rylan Polster](https://github.com/Rylan12), [Štefan Baebler](https://github.com/stefanb), [Thierry Moisan](https://github.com/Moisan) and [William Woodruff](https://github.com/woodruffw).
+```powershell
+Invoke-Pester -Script 'test'
+```
 
-Homebrew was originally created by [Max Howell](https://github.com/mxcl).
-
-## 📜 License
-
-Code is under the [BSD 2-clause "Simplified" License](LICENSE.txt).
-Documentation is under the [Creative Commons Attribution license](https://creativecommons.org/licenses/by/4.0/).
-
-## 💛 Sponsors
-
-Our macOS continuous integration infrastructure is hosted by [MacStadium's Orka](https://www.macstadium.com/customers/homebrew).
-
-[![Powered by MacStadium](https://cloud.githubusercontent.com/assets/125011/22776032/097557ac-eea6-11e6-8ba8-eff22dfd58f1.png)](https://www.macstadium.com)
-
-Secure password storage and syncing is provided by [1Password for Teams](https://1password.com/teams/).
-
-[<img src="https://i.1password.com/akb/featured/1password-icon.svg" alt="1Password" height="64">](https://1password.com)
-
-<https://brew.sh>'s DNS is [resolving with DNSimple](https://dnsimple.com/resolving/homebrew).
-
-[![DNSimple](https://cdn.dnsimple.com/assets/resolving-with-us/logo-light.png)](https://dnsimple.com/resolving/homebrew#gh-light-mode-only)
-[![DNSimple](https://cdn.dnsimple.com/assets/resolving-with-us/logo-dark.png)](https://dnsimple.com/resolving/homebrew#gh-dark-mode-only)
-
-Homebrew is generously supported by [Joshua Baer](https://github.com/joshuabaer), [Randy Reddig](https://github.com/ydnar), [Codecademy](https://github.com/Codecademy), [b.well](https://github.com/icanbwell), [Workbrew](https://github.com/Workbrew), [GitHub](https://github.com/github), [Custom Ink](https://github.com/customink), [SAP](https://github.com/SAP) and many other users and organisations via [GitHub Sponsors](https://github.com/sponsors/Homebrew).
-
-[![GitHub](https://github.com/github.png?size=64)](https://github.com/github)
+The suite is read-only: it inspects the local Scoop install and buckets and
+never installs, updates or removes anything. It pins the behaviour of the
+version comparison, the manifest field helpers, GNU option binding, and the
+requirement that every Homebrew command name is either implemented or has a
+stated reason.

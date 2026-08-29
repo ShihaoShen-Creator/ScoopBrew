@@ -3,11 +3,11 @@ name: ScoopBrew
 on:
   push:
     paths:
-      - 'windows/**'
+      - '**'
       - '.github/workflows/scoopbrew.yml'
   pull_request:
     paths:
-      - 'windows/**'
+      - '**'
       - '.github/workflows/scoopbrew.yml'
   workflow_dispatch:
 
@@ -22,7 +22,7 @@ jobs:
       run:
         shell: powershell
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install Scoop
         run: |
@@ -47,11 +47,11 @@ jobs:
       - name: Run Pester suite
         run: |
           Import-Module Pester -RequiredVersion 3.4.0
-          Invoke-Pester -Script 'windows/test' -EnableExit
+          Invoke-Pester -Script 'test' -EnableExit
 
       - name: Smoke test the command surface
         run: |
-          $brew = './windows/bin/brew.ps1'
+          $brew = './bin/brew.ps1'
           foreach ($case in @(
             @('--version'),
             @('commands'),
@@ -68,9 +68,9 @@ jobs:
 
       - name: Smoke test the cmd entry point
         run: |
-          cmd /c "windows\bin\brew.cmd --version"
+          cmd /c "bin\brew.cmd --version"
           if ($LASTEXITCODE -ne 0) { throw "brew.cmd --version exited $LASTEXITCODE" }
-          cmd /c "windows\bin\brew.cmd definitely-not-a-command >nul 2>&1"
+          cmd /c "bin\brew.cmd definitely-not-a-command >nul 2>&1"
           if ($LASTEXITCODE -eq 0) { throw "brew.cmd must exit non-zero for an unknown command" }
 
       # Doctor reports environment warnings as its job, so its exit code is
@@ -78,6 +78,6 @@ jobs:
       - name: Report environment diagnostics
         if: always()
         run: |
-          & './windows/bin/brew.ps1' doctor
+          & './bin/brew.ps1' doctor
           Write-Host "brew doctor exited $LASTEXITCODE"
           exit 0
