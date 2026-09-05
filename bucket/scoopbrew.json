@@ -1,0 +1,23 @@
+{
+    "version": "0.1.0",
+    "description": "Homebrew command surface for Windows, backed by Scoop.",
+    "homepage": "https://github.com/ShihaoShen-Creator/ScoopBrew",
+    "license": "BSD-2-Clause",
+    "url": "https://github.com/ShihaoShen-Creator/ScoopBrew/archive/refs/tags/v0.1.0.zip",
+    "hash": "513795e6758a88076247e9635f8d8bdf06bfb900be61d0ac3247611a804cd66c",
+    "extract_dir": "ScoopBrew-0.1.0",
+    "bin": [
+        "bin/brew.cmd",
+        "bin/brew.ps1"
+    ],
+    "depends": [
+        "git"
+    ],
+    "checkver": {
+        "github": "ShihaoShen-Creator/ScoopBrew"
+    },
+    "autoupdate": {
+        "url": "https://github.com/ShihaoShen-Creator/ScoopBrew/archive/refs/tags/v$version.zip",
+        "extract_dir": "ScoopBrew-$version"
+    }
+}
