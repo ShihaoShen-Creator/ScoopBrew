@@ -7,7 +7,7 @@
 
 Set-StrictMode -Off
 
-$script:BrewVersion = '0.1.0'
+$script:BrewVersion = '0.2.0'
 $script:BrewIndexVersion = 3
 $script:BrewRoot = Split-Path -Parent $PSScriptRoot
 $script:CommandsDir = Join-Path $script:BrewRoot 'commands'
@@ -651,6 +651,41 @@ function Get-BrewFlagArgs {
         Where-Object { $_ -ne '' -and $_ -match '^-' })
 }
 
+function Test-BrewSelfTarget {
+    <#
+        Returns an error message when a package name resolves to Scoop or
+        ScoopBrew itself, which should be managed directly with `scoop`.
+        Otherwise returns $null.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][ValidateSet('install', 'uninstall')][string]$Command
+    )
+
+    if ($Name -match '^(?:(?<bucket>[a-zA-Z0-9._-]+)/)?(?<app>[a-zA-Z0-9._-]+)') {
+        $bucket = $Matches['bucket']
+        $app = $Matches['app']
+    }
+    else {
+        return $null
+    }
+
+    if ($app -match '^scoop$') {
+        if (-not $bucket -or $bucket -match '^main$') {
+            if ($Command -eq 'install') {
+                return "To force reinstall Scoop, use 'scoop install scoop' instead."
+            }
+            return "To uninstall Scoop, use 'scoop uninstall scoop' instead."
+        }
+    }
+
+    if ($app -match '^scoopbrew$' -and $Command -eq 'uninstall') {
+        return "To uninstall ScoopBrew, use 'scoop uninstall scoopbrew' instead."
+    }
+
+    return $null
+}
+
 function Format-BrewLicense {
     param([object]$License)
 
@@ -1191,7 +1226,7 @@ Export-ModuleMember -Function `
     Get-BrewTapMap, Resolve-BrewTapName, `
     Get-BrewOutdatedPackages, Get-BrewPackagePath, Compare-BrewVersion, Get-BrewVersionCore, `
     ConvertTo-BrewList, Format-BrewLicense, Get-BrewSuggest, Get-BrewManifestDepends, Get-BrewManifestVersion, `
-    Get-BrewNameArgs, Get-BrewFlagArgs, Format-BrewDate, `
+    Get-BrewNameArgs, Get-BrewFlagArgs, Test-BrewSelfTarget, Format-BrewDate, `
     Get-BrewBinaries, Get-BrewManifestScalar, `
     Convert-BrewFlags, Show-DroppedFlags, Get-BrewUnsupportedCommand, `
     Get-BrewCommandAlias, Get-BrewCommandAliases

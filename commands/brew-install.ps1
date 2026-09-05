@@ -25,6 +25,11 @@ $flags = @(Get-BrewFlagArgs $Tokens)
 
 if ($names.Count -eq 0) { Abort-Brew 'This command requires a package name.' }
 
+foreach ($name in $names) {
+    $guard = Test-BrewSelfTarget -Name $name -Command 'install'
+    if ($guard) { Abort-Brew $guard }
+}
+
 $allowed = @('--no-cache', '--insecure', '--check-hash-only', '--verbose', '--use-cache', '--arch', '--global')
 $parsed = Convert-BrewFlags -Flags $flags -Allowed $allowed
 Show-DroppedFlags -Dropped $parsed.Dropped

@@ -8,9 +8,9 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Off
 
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$modulePath = Join-Path $repoRoot 'windows\lib\ScoopBrew.psm1'
-$brewScript = Join-Path $repoRoot 'windows\bin\brew.ps1'
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$modulePath = Join-Path $repoRoot 'lib\ScoopBrew.psm1'
+$brewScript = Join-Path $repoRoot 'bin\brew.ps1'
 
 Import-Module $modulePath -DisableNameChecking -Force
 
@@ -297,7 +297,7 @@ Describe 'installed package inventory' {
 
 Describe 'command surface' {
     It 'gives every command a Usage and Summary header' {
-        $commandsDir = Join-Path $repoRoot 'windows\commands'
+        $commandsDir = Join-Path $repoRoot 'commands'
         foreach ($file in (Get-ChildItem $commandsDir -Filter 'brew-*.ps1')) {
             $text = Get-Content -LiteralPath $file.FullName -Raw
             $text | Should Match '#\s*Usage:'
@@ -306,7 +306,7 @@ Describe 'command surface' {
     }
 
     It 'has no command with a parse error' {
-        foreach ($file in (Get-ChildItem (Join-Path $repoRoot 'windows') -Recurse -Include '*.ps1', '*.psm1')) {
+        foreach ($file in (Get-ChildItem $repoRoot -Recurse -Include '*.ps1', '*.psm1')) {
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
                 $file.FullName, [ref]$null, [ref]$errors) | Out-Null
@@ -319,7 +319,7 @@ Describe 'command surface' {
         # parses as (a, 'b') + $x + ('c', d): the concatenation is torn apart
         # and the array never even appears in the parse tree. The signature of
         # the torn form is a '+' whose operand is a comma-built array.
-        foreach ($file in (Get-ChildItem (Join-Path $repoRoot 'windows') -Recurse -Include '*.ps1', '*.psm1')) {
+        foreach ($file in (Get-ChildItem $repoRoot -Recurse -Include '*.ps1', '*.psm1')) {
             $ast = [System.Management.Automation.Language.Parser]::ParseFile(
                 $file.FullName, [ref]$null, [ref]$null)
             $torn = @($ast.FindAll({
@@ -395,7 +395,7 @@ Describe 'unsupported command coverage' {
         }
         $repoCommands = @($repoCommands | Sort-Object -Unique)
 
-        $implemented = @(Get-ChildItem (Join-Path $repoRoot 'windows\commands') -Filter 'brew-*.ps1' |
+        $implemented = @(Get-ChildItem (Join-Path $repoRoot 'commands') -Filter 'brew-*.ps1' |
             ForEach-Object { $_.BaseName -replace '^brew-', '' })
 
         # Handled by the entry point rather than a command file.

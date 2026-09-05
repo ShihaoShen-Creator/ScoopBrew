@@ -18,6 +18,11 @@ Test-ScoopInstalled | Out-Null
 $names = @(Get-BrewNameArgs $Tokens)
 if ($names.Count -eq 0) { Abort-Brew 'This command requires a package name.' }
 
+foreach ($name in $names) {
+    $guard = Test-BrewSelfTarget -Name $name -Command 'uninstall'
+    if ($guard) { Abort-Brew $guard }
+}
+
 if ($Zap) { brewWarn '--zap is not needed: Scoop manifests carry their own uninstaller script.' }
 
 $installedNames = @(Get-BrewInstalledPackages | ForEach-Object { $_.Name })
