@@ -8,9 +8,8 @@ every package operation to Scoop. Homebrew's macOS/Linux install engine
 (Cellar, kegs, bottles, `rpath`, `dyld`, source builds) has no Windows
 counterpart, so the engine is Scoop's and this layer only speaks `brew`.
 
-## Requirements
+## Requirements & Installation
 
-| | |
 | --- | --- |
 | Windows | 10 or later |
 | PowerShell | 5.1 or 7.x (no module dependencies) |
