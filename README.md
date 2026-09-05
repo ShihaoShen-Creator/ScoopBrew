@@ -20,7 +20,14 @@ counterpart, so the engine is Scoop's and this layer only speaks `brew`.
 Install Scoop first:
 
 ```powershell
-powershell -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; iwr get.scoop.sh | iex"
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+```
+
+Then: 
+```powershell
+scoop bucket add shihao https://github.com/ShihaoShen-Creator/ScoopBucket
+scoop install scoopbrew # or: scoop install shihao/scoopbrew
 ```
 
 ## Usage
